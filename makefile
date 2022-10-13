@@ -1,7 +1,7 @@
 .venv:
 	python -m venv .venv
 	source .venv/bin/activate && make setup dev
-	echo 'run `source .venv/bin/activate` to develop aiosqlite'
+	echo 'run `source .venv/bin/activate` to develop aioduckdb'
 
 venv: .venv
 
@@ -16,21 +16,21 @@ release: lint test clean
 	flit publish
 
 format:
-	python -m usort format aiosqlite
-	python -m black aiosqlite
+	python -m usort format aioduckdb
+	python -m black aioduckdb
 
 lint:
-	python -m flake8 aiosqlite
-	python -m usort check aiosqlite
-	python -m black --check aiosqlite
+	python -m flake8 aioduckdb
+	python -m usort check aioduckdb
+	python -m black --check aioduckdb
 
 test:
-	python -m coverage run -m aiosqlite.tests
+	python -m coverage run -m aioduckdb.tests
 	python -m coverage report
-	python -m mypy aiosqlite/*.py
+	python -m mypy aioduckdb/*.py
 
 perf:
-	python -m unittest -v aiosqlite.tests.perf
+	python -m unittest -v aioduckdb.tests.perf
 
 .PHONY: html
 html: .venv README.rst docs/*.rst docs/conf.py

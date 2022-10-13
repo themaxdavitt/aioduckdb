@@ -3,7 +3,7 @@ requires = ["flit_core >=2,<4"]
 build-backend = "flit_core.buildapi"
 
 [tool.flit.metadata]
-module = "aiosqlite"
+module = "aioduckdb"
 author = "Amethyst Reese"
 author-email = "amy@noswap.com"
 description-file = "README.rst"
@@ -31,8 +31,8 @@ exclude = [
 
 [tool.coverage.run]
 branch = true
-include = ["aiosqlite/*"]
-omit = ["aiosqlite/tests/*"]
+include = ["aioduckdb/*"]
+omit = ["aioduckdb/tests/*"]
 
 [tool.coverage.report]
 fail_under = 75
