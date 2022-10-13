@@ -1,7 +1,7 @@
 aioduckdb\: DuckDB for AsyncIO
 ==============================
 
-aioduckdb provides a friendly, async interface to DuckDB databases.
+aioduckdb provides a friendly, async interface to DuckDB databases. It has been ported from the original aiosqlite module.
 
 It replicates the ``duckdb`` module, but with async versions
 of all the standard connection and cursor methods, plus context managers for
@@ -49,7 +49,7 @@ async iterators to query results.
 License
 -------
 
-aioduckdb is copyright `Salvador Pardiñas`_, and licensed under the
+aioduckdb is copyright Salvador Pardiñas, and licensed under the
 MIT license.  I am providing code in this repository to you under an open source
 license.  This is my personal repository; the license you receive to my code
 is from me and not from my employer. See the `LICENSE`_ file for details.
