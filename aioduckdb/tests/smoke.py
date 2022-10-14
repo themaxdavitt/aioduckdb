@@ -7,6 +7,7 @@ from pathlib import Path
 from duckdb import OperationalError
 from threading import Thread
 from unittest import skipIf, SkipTest, skipUnless
+import pandas
 
 if sys.version_info < (3, 8):
     from aiounittest import AsyncTestCase as TestCase
@@ -199,13 +200,45 @@ class SmokeTest(TestCase):
             )
             self.assertEqual(result, cursor)
 
-            # result = await cursor.executescript(
-            #     "insert into test_cursor_return_self values (3, 3);"
-            #     "insert into test_cursor_return_self values (4, 4);"
-            #     "insert into test_cursor_return_self values (5, 5);"
-            # )
-            # self.assertEqual(result, cursor)
-            # executescript is not supported yet
+    async def test_cursor_df(self):
+        async with aioduckdb.connect(TEST_DB) as db:
+            cursor = await db.cursor()
+
+            await cursor.execute(
+                "create table test_cursor_df (i integer, k integer)"
+            )
+
+            await cursor.executemany(
+                "insert into test_cursor_df values (?, ?)", [(1, 1), (2, 2)]
+            )
+
+            cursor = await cursor.execute('select * from test_cursor_df')
+
+            df = await cursor.df()
+
+            self.assertTrue(all(df == pandas.DataFrame([
+                {'i':1,'k':2},
+                {'i':2,'k':2}
+            ])))
+
+    async def test_relation_minmax(self):
+        async with aioduckdb.connect(TEST_DB) as db:
+            async with db.cursor() as cursor:
+                await cursor.execute(
+                    "create table test_relation_minmax (i integer, k integer)"
+                )
+
+                await cursor.executemany(
+                    "insert into test_relation_minmax values (?, ?)", [(1, 7), (2, 2), (3,5)]
+                )
+
+            relation = await db.query('select * from test_relation_minmax')
+
+            mini, mink = await (await relation.min('i,k')).fetchone()
+            self.assertEqual((mini,mink), (1,2))
+
+            maxi, maxk = await (await relation.max('i,k')).fetchone()
+            self.assertEqual((maxi,maxk), (3,7))
 
     async def test_connection_properties(self):
         async with aioduckdb.connect(TEST_DB) as db:

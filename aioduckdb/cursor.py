@@ -6,6 +6,8 @@ from typing import Any, AsyncIterator, Iterable, Optional, Tuple, TYPE_CHECKING,
 
 if TYPE_CHECKING:
     from .core import Connection
+    import pandas
+    import pyarrow
 
 
 class Cursor:
@@ -70,6 +72,12 @@ class Cursor:
         """Fetch all remaining rows."""
         return await self._execute(self._cursor.fetchall)
 
+    async def arrow(self) -> "pyarrow.lib.Table":
+        return await self._execute(self._cursor.arrow)
+
+    async def df(self) -> "pandas.DataFrame":
+        return await self._execute(self._cursor.df)
+    
     async def close(self) -> None:
         """Close the cursor."""
         await self._execute(self._cursor.close)
@@ -82,9 +90,6 @@ class Cursor:
     #     return self._cursor.rowcount
 
     # lastrowid is not supported in duckdb, insert statements with returning are recommended instead
-    # @property
-    # def lastrowid(self) -> int:
-    #     return self._cursor.lastrowid
 
     @property
     def description(self) -> Union[Tuple[Tuple], object]:

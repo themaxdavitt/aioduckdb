@@ -35,6 +35,7 @@ else:
 
 from .context import contextmanager
 from .cursor import Cursor
+from .relation import Relation
 
 __all__ = ["connect", "Connection", "Cursor"]
 
@@ -168,6 +169,11 @@ class Connection(Thread):
         """Create an aiosqlite cursor wrapping a sqlite3 cursor object."""
         return Cursor(self, await self._execute(self._conn.cursor))
 
+    @contextmanager
+    async def query(self, query: str, alias: str = 'query_relation') -> Relation:
+        """Create an aioduckdb relation wrapping a duckdb PyRelation object"""
+        return Relation(self, await self._execute(self._conn.query, query, alias=alias))
+
     async def commit(self) -> None:
         """Commit the current transaction."""
         await self._execute(self._conn.commit)
@@ -229,11 +235,6 @@ class Connection(Thread):
     #     cursor = await self._execute(self._conn.executescript, sql_script)
     #     return Cursor(self, cursor)
 
-    # no equivalent to interrput
-    # async def interrupt(self) -> None:
-    #     """Interrupt pending queries."""
-    #     return self._conn.interrupt()
-
     # DuckDB has very limited support for UDF and is not appliable yet
     # async def create_function(
     #     self, name: str, num_params: int, func: Callable, deterministic: bool = False
@@ -268,57 +269,20 @@ class Connection(Thread):
 
     #         await self._execute(self._conn.create_function, name, num_params, func)
 
-    # No equivalent in DuckDB: autocommit mode executes inserts or updates instantly.
-    # @property
-    # def in_transaction(self) -> bool:
-    #     return self._conn.in_transaction
-
+    # No equivalent to in_process in DuckDB: autocommit mode executes inserts or updates instantly.
     # The only isolation level in DuckDB is Snapshot and there's no SQLite equivalent
-    # @property
-    # def isolation_level(self) -> IsolationLevel:
-    #     return self._conn.isolation_level
 
-    # @isolation_level.setter
-    # def isolation_level(self, value: IsolationLevel) -> None:
-    #     self._conn.isolation_level = value
-
-    # @property
-    # def row_factory(self) -> "Optional[Type]":  # py3.5.2 compat (#24)
-    #     return self._conn.row_factory
-
-    # @row_factory.setter
-    # def row_factory(self, factory: "Optional[Type]") -> None:  # py3.5.2 compat (#24)
-    #     self._conn.row_factory = factory
-
-    # @property
-    # def text_factory(self) -> Type:
-    #     return self._conn.text_factory
-
-    # @text_factory.setter
-    # def text_factory(self, factory: Type) -> None:
-    #     self._conn.text_factory = factory
-
-    # @property
-    # def total_changes(self) -> int:
-    #     return self._conn.total_changes
-
-    # async def enable_load_extension(self, value: bool) -> None:
-    #     await self._execute(self._conn.enable_load_extension, value)  # type: ignore
-
+    # No factories in DuckDB: proof of concept was developed and performance was worse
+    # than python postprocessing
+    
     async def load_extension(self, path: str):
         await self._execute(self._conn.load_extension, path)  # type: ignore
 
-    # No progress handlers in DuckDB
-    # async def set_progress_handler(
-    #     self, handler: Callable[[], Optional[int]], n: int
-    # ) -> None:
-    #     await self._execute(self._conn.set_progress_handler, handler, n)
+    # No progress handlers or trace_callback in DuckDB
 
-    #
-    # async def set_trace_callback(self, handler: Callable) -> None:
-    #     await self._execute(self._conn.set_trace_callback, handler)
+    # Not supported in DuckDB's API but is available in the CLI, todo investigate
+    # if it's easy to expose through the APIs
 
-    # Not supported in DuckDB's API but is available in the CLI, todo investigate if it's easy to expose through the APIs
     # async def iterdump(self) -> AsyncIterator[str]:
     #     """
     #     Return an async iterator to dump the database in SQL text format.
