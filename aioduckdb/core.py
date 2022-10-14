@@ -174,6 +174,15 @@ class Connection(Thread):
         """Create an aioduckdb relation wrapping a duckdb PyRelation object"""
         return Relation(self, await self._execute(self._conn.query, query, alias=alias))
 
+    @contextmanager
+    async def table(self, table_name: str) -> Relation:
+        """Create a relation object for the name’d table"""
+        return Relation(self, await self._execute(self._conn.table, table_name))
+
+    @contextmanager
+    async def values(self, values: Iterable) -> Relation:
+        return Relation(self, await self._execute(self._conn.values, values))
+
     async def commit(self) -> None:
         """Commit the current transaction."""
         await self._execute(self._conn.commit)
@@ -227,6 +236,13 @@ class Connection(Thread):
         """Helper to create a cursor and execute the given multiquery."""
         cursor = await self._execute(self._conn.executemany, sql, parameters)
         return Cursor(self, cursor)
+
+    @contextmanager
+    async def from_df(
+        self, df: "pandas.DataFrame"
+    ) -> Relation:
+        relation = await self._execute(self._conn.from_df, df)
+        return Relation(self, relation)
 
     # Apparently no equivalent to executescript? Verify API and compare to sqlite3's internals
     # @contextmanager
