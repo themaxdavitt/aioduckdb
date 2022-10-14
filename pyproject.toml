@@ -4,10 +4,10 @@ build-backend = "flit_core.buildapi"
 
 [tool.flit.metadata]
 module = "aioduckdb"
-author = "Amethyst Reese"
-author-email = "amy@noswap.com"
+author = "Salvador Pardiñas"
+author-email = "darkfm@vera.com.uy"
 description-file = "README.rst"
-home-page = "https://aiosqlite.omnilib.dev"
+home-page = "https://github.com/kouta-kun/aioduckdb"
 requires = [
     "typing_extensions >= 4.0; python_version < '3.8'",
 ]
@@ -21,8 +21,7 @@ classifiers = [
 ]
 
 [tool.flit.metadata.urls]
-Documentation = "https://aiosqlite.omnilib.dev/en/latest/"
-Github = "https://github.com/omnilib/aiosqlite"
+Github = "https://github.com/kouta-kun/aioduckdb"
 
 [tool.flit.sdist]
 exclude = [

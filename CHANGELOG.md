@@ -1,3 +1,11 @@
+aioduckdb
+=========
+
+v0.1.0
+------
+Ported from aioqslite. Supports most features (a couple of issues are referenced for which rowcount does not exist in duckdb)
+
+
 aiosqlite
 =========
 
