@@ -78,7 +78,7 @@ class TestArrowDataset(TestCase):
 
             rel = await duckdb_conn.register("dataset",userdata_parquet_dataset)
 
-            self.assertEqual((await (await duckdb_conn.execute("Select count(*) from dataset where first_name = 'Jose' and salary > 134708.82")).fetchone())[0], 12)
+            self.assertEqual((await (await duckdb_conn.execute_on_self("Select count(*) from dataset where first_name = 'Jose' and salary > 134708.82")).fetchone())[0], 12)
 
     async def test_parallel_dataset_roundtrip(self):
         if not can_run:
@@ -98,7 +98,7 @@ class TestArrowDataset(TestCase):
 
             rel = await duckdb_conn.register("dataset",userdata_parquet_dataset)
 
-            query = await duckdb_conn.execute("SELECT * FROM dataset order by id" )
+            query = await duckdb_conn.execute_on_self("SELECT * FROM dataset order by id" )
             record_batch_reader = await query.fetch_record_batch(2048)
 
             arrow_table = record_batch_reader.read_all()

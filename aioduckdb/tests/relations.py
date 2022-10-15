@@ -145,7 +145,7 @@ class RelationTest(TestCase):
             await rel.insert_into("test_table3")
 
             # Inserting elements into table_3
-            print(await (await conn.values([5, 'five'])).insert_into("test_table3"))
+            await (await conn.values([5, 'five'])).insert_into("test_table3")
             rel_3 = await conn.table("test_table3")
             await rel_3.insert([6,'six'])
 

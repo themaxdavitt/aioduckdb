@@ -24,7 +24,8 @@ from typing import (
     Optional,
     Type,
     Union,
-    Tuple
+    Tuple,
+    TYPE_CHECKING
 )
 from warnings import warn
 
@@ -36,6 +37,10 @@ else:
 from .context import contextmanager
 from .cursor import Cursor
 from .relation import Relation
+
+if TYPE_CHECKING:
+    import pandas
+    import pyarrow
 
 __all__ = ["connect", "Connection", "Cursor"]
 
@@ -166,7 +171,7 @@ class Connection(Thread):
 
     @contextmanager
     async def cursor(self) -> Cursor:
-        """Create an aiosqlite cursor wrapping a sqlite3 cursor object."""
+        """Create an aiosqlite cursor wrapping a sqlite3 cursor object (actually a duplicate of the connection, so make sure you're not trying to use registered tables between different connections)."""
         return Cursor(self, await self._execute(self._conn.cursor))
 
     @contextmanager
@@ -204,12 +209,29 @@ class Connection(Thread):
 
     @contextmanager
     async def execute(self, sql: str, parameters: Iterable[Any] = None) -> Cursor:
-        """Helper to create a cursor and execute the given query."""
+        """Helper to create a cursor and execute the given query.
+        Huge warning: this function does not copy over registered objects and such. If you need those,
+        use execute_on_self or as_cursor
+        """
         if parameters is None:
             parameters = []
         cursor = await self.cursor()
         await cursor.execute(sql, parameters)
         return cursor
+
+    @contextmanager
+    async def execute_on_self(self, sql: str, parameters: Iterable[Any] = None) -> Cursor:
+        """Function to execute the given query on this connection and cast it to a cursor."""
+        if parameters is None:
+            parameters = []
+        cursor = Cursor(self, self._conn)
+        await cursor.execute(sql, parameters)
+        return cursor
+
+    @contextmanager
+    async def as_cursor(self) -> Cursor:
+        """Casts this connection to a cursor"""
+        return Cursor(self, self._conn)
 
     @contextmanager
     async def execute_insert(
@@ -262,19 +284,19 @@ class Connection(Thread):
     async def from_parquet(
         self, file_name: str, binary_as_string: bool = False
     ) -> Relation:
-        relation = await self._execute(self._conn.from_parquet, filename, binary_as_string=binary_as_string)
+        relation = await self._execute(self._conn.from_parquet, file_name, binary_as_string=binary_as_string)
         return Relation(self, relation)
 
     async def register(
         self, view_name: str, python_object: object
-    ) -> Relation:
-        relation = await self._execute(self._conn.register, view_name, python_object)
-        return Relation(self, relation)
+    ) -> "Connection":
+        await self._execute(self._conn.register, view_name, python_object)
+        return self
 
     async def unregister(
         self, view_name: str
     ) -> "Connection":
-        await self._execute(self._unregister, view_name)
+        await self._execute(self._conn.unregister, view_name)
         return self
 
     # Apparently no equivalent to executescript? Verify API and compare to sqlite3's internals

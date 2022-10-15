@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     import pandas
 
 class Result:
-    def __init__(self, conn: "connection", result: duckdb.DuckDBPyResult) -> None:
+    def __init__(self, conn: "Connection", result: duckdb.DuckDBPyResult) -> None:
         self.result = result
         self._conn = conn
 
