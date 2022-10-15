@@ -238,11 +238,44 @@ class Connection(Thread):
         return Cursor(self, cursor)
 
     @contextmanager
+    async def from_csv_auto(
+        self, file_name: str
+    ) -> Relation:
+        relation = await self._execute(self._conn.from_csv_auto, file_name)
+        return Relation(self, relation)
+
+    @contextmanager
     async def from_df(
         self, df: "pandas.DataFrame"
     ) -> Relation:
         relation = await self._execute(self._conn.from_df, df)
         return Relation(self, relation)
+
+    @contextmanager
+    async def from_arrow(
+        self, arrow_object: object
+    ) -> Relation:
+        relation = await self._execute(self._conn.from_arrow, arrow_object)
+        return Relation(self, relation)
+
+    @contextmanager
+    async def from_parquet(
+        self, file_name: str, binary_as_string: bool = False
+    ) -> Relation:
+        relation = await self._execute(self._conn.from_parquet, filename, binary_as_string=binary_as_string)
+        return Relation(self, relation)
+
+    async def register(
+        self, view_name: str, python_object: object
+    ) -> Relation:
+        relation = await self._execute(self._conn.register, view_name, python_object)
+        return Relation(self, relation)
+
+    async def unregister(
+        self, view_name: str
+    ) -> "Connection":
+        await self._execute(self._unregister, view_name)
+        return self
 
     # Apparently no equivalent to executescript? Verify API and compare to sqlite3's internals
     # @contextmanager

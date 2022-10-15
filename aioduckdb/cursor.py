@@ -72,6 +72,9 @@ class Cursor:
         """Fetch all remaining rows."""
         return await self._execute(self._cursor.fetchall)
 
+    async def fetch_record_batch(self, chunk_size: int = 1000000) -> "pyarrow.lib.RecordBatchReader":
+        return await self._execute(self._cursor.fetch_record_batch, chunk_size=chunk_size)
+
     async def arrow(self) -> "pyarrow.lib.Table":
         return await self._execute(self._cursor.arrow)
 

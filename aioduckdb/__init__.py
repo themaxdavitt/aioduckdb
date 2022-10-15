@@ -4,6 +4,7 @@
 """asyncio bridge to the standard sqlite3 module"""
 
 from duckdb import (  # pylint: disable=redefined-builtin
+    ConversionException,
     DataError,
     Error,
     IntegrityError,

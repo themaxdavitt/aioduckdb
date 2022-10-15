@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+import tempfile
 
 import numpy as np
 import pandas as pd
@@ -135,53 +136,52 @@ class RelationTest(TestCase):
             r = await conn.query("select * from test_df")
             self.assertEqual(await r.fetchall(), [(1, 'one'), (2, 'two'), (3, 'three'),(4, 'four')])
 
-    # def test_insert_into_operator(self):
-    #     conn = duckdb.connect()
-    #     test_df = pd.DataFrame.from_dict({"i":[1, 2, 3, 4], "j":["one", "two", "three", "four"]})
-    #     rel = conn.from_df(test_df)
-    #     rel.create("test_table2")
-    #     # insert the relation's data into an existing table
-    #     conn.execute("CREATE TABLE test_table3 (i INTEGER, j STRING)")
-    #     rel.insert_into("test_table3")
+    async def test_insert_into_operator(self):
+        async with aioduckdb.connect(TEST_DB) as conn:
+            rel = await get_relation(conn)
+            await rel.create("test_table2")
+            # insert the relation's data into an existing table
+            await conn.execute("CREATE TABLE test_table3 (i INTEGER, j STRING)")
+            await rel.insert_into("test_table3")
 
-    #     # Inserting elements into table_3
-    #     print(conn.values([5, 'five']).insert_into("test_table3"))
-    #     rel_3 = conn.table("test_table3")
-    #     rel_3.insert([6,'six'])
+            # Inserting elements into table_3
+            print(await (await conn.values([5, 'five'])).insert_into("test_table3"))
+            rel_3 = await conn.table("test_table3")
+            await rel_3.insert([6,'six'])
 
-    #     assert rel_3.execute().fetchall() == [(1, 'one'), (2, 'two'), (3, 'three'), (4, 'four'), (5, 'five'), (6, 'six')]
+            self.assertEqual(await rel_3.fetchall(), [(1, 'one'), (2, 'two'), (3, 'three'), (4, 'four'), (5, 'five'), (6, 'six')])
+        
+    async def test_write_csv_operator(self):
+        async with aioduckdb.connect(TEST_DB) as conn:
+            df_rel = await get_relation(conn)
+            temp_file_name = os.path.join(tempfile.mkdtemp(), next(tempfile._get_candidate_names()))
+            await df_rel.write_csv(temp_file_name)
 
-    # def test_write_csv_operator(self):
-    #     conn = duckdb.connect()
-    #     df_rel = get_relation(conn)
-    #     temp_file_name = os.path.join(tempfile.mkdtemp(), next(tempfile._get_candidate_names()))
-    #     df_rel.write_csv(temp_file_name)
+            csv_rel = await conn.from_csv_auto(temp_file_name)
+            self.assertEqual(await df_rel.fetchall(), await csv_rel.fetchall())
 
-    #     csv_rel = duckdb.from_csv_auto(temp_file_name)
-    #     assert df_rel.execute().fetchall() == csv_rel.execute().fetchall()
+    async def test_get_attr_operator(self):
+        async with aioduckdb.connect(TEST_DB) as conn:
+            await conn.execute("CREATE TABLE test (i INTEGER)")
+            rel = await conn.table("test")
+            assert rel.alias == "test"
+            assert rel.type == "TABLE_RELATION"
+            assert rel.columns == ['i']
+            assert rel.types == ['INTEGER']
 
-    # def test_get_attr_operator(self):
-    #     conn = duckdb.connect()
-    #     conn.execute("CREATE TABLE test (i INTEGER)")
-    #     rel = conn.table("test")
-    #     assert rel.alias == "test"
-    #     assert rel.type == "TABLE_RELATION"
-    #     assert rel.columns == ['i']
-    #     assert rel.types == ['INTEGER']
+    async def test_query_fail(self):
+        async with aioduckdb.connect(TEST_DB) as conn:
+            await conn.execute("CREATE TABLE test (i INTEGER)")
+            rel = await conn.table("test")
+            with self.assertRaisesRegex(TypeError, 'incompatible function arguments'):
+                await rel.query("select j from test")
 
-    # def test_query_fail(self):
-    #     conn = duckdb.connect()
-    #     conn.execute("CREATE TABLE test (i INTEGER)")
-    #     rel = conn.table("test")
-    #     with pytest.raises(TypeError, match='incompatible function arguments'):
-    #         rel.query("select j from test")
-
-    # def test_execute_fail(self):
-    #     conn = duckdb.connect()
-    #     conn.execute("CREATE TABLE test (i INTEGER)")
-    #     rel = conn.table("test")
-    #     with pytest.raises(TypeError, match='incompatible function arguments'):
-    #         rel.execute("select j from test")
+    async def test_execute_fail(self):
+        async with aioduckdb.connect(TEST_DB) as conn:
+            await conn.execute("CREATE TABLE test (i INTEGER)")
+            rel = await conn.table("test")
+            with self.assertRaisesRegex(TypeError, 'incompatible function arguments'):
+                await rel.execute("select j from test")
 
     # def test_df_proj(self):
     #     test_df = pd.DataFrame.from_dict({"i":[1, 2, 3, 4], "j":["one", "two", "three", "four"]})
@@ -216,15 +216,16 @@ class RelationTest(TestCase):
     #     assert  csv_rel.execute().fetchall() == [(1, 'one'), (2, 'two'), (3, 'three'), (4, 'four')]
 
 
-    # def test_join_types(self):
-    #     test_df1 = pd.DataFrame.from_dict({"i":[1, 2, 3, 4]})
-    #     test_df2 = pd.DataFrame.from_dict({"j":[  3, 4, 5, 6]})
-    #     rel1 = duckdb_cursor.from_df(test_df1)
-    #     rel2 = duckdb_cursor.from_df(test_df2)
+    async def test_join_types(self):
+        async with aioduckdb.connect(TEST_DB) as conn:
+            test_df1 = pd.DataFrame.from_dict({"i":[1, 2, 3, 4]})
+            test_df2 = pd.DataFrame.from_dict({"j":[  3, 4, 5, 6]})
+            rel1 = await conn.from_df(test_df1)
+            rel2 = await conn.from_df(test_df2)
 
-    #     assert rel1.join(rel2, 'i=j', 'inner').aggregate('count()').fetchone()[0] == 2
-
-    #     assert rel1.join(rel2, 'i=j', 'left').aggregate('count()').fetchone()[0] == 4
+            self.assertEqual((await (await (await rel1.join(rel2, 'i=j', 'inner')).aggregate('count()')).fetchone())[0], 2)
+            
+            self.assertEqual((await (await (await rel1.join(rel2, 'i=j', 'left')).aggregate('count()')).fetchone())[0], 4)
 
     # def test_explain(self):
     #     con = duckdb.connect()
@@ -235,33 +236,33 @@ class RelationTest(TestCase):
     #     join = rel1.join(rel2, 'i=j', 'inner').aggregate('count()')
     #     assert join.explain() == 'Aggregate [count_star()]\n  Join INNER (i = j)\n    Scan Table [t1]\n    Scan Table [t2]'
 
-    # def test_fetchnumpy(self):
-    #     start, stop = -1000, 2000
-    #     count = stop - start
+    async def test_fetchnumpy(self):
+        start, stop = -1000, 2000
+        count = stop - start
 
-    #     con = duckdb.connect()
-    #     con.execute(f"CREATE table t AS SELECT range AS a FROM range({start}, {stop});")
-    #     rel = con.table("t")
+        async with aioduckdb.connect(TEST_DB) as con:
+            await con.execute(f"CREATE table t AS SELECT range AS a FROM range({start}, {stop});")
+            rel = await con.table("t")
+        
+            # empty
+            res = await (await rel.limit(0, offset=count + 1)).fetchnumpy()
+            assert set(res.keys()) == {"a"}
+            assert len(res["a"]) == 0
 
-    #     # empty
-    #     res = rel.limit(0, offset=count + 1).fetchnumpy()
-    #     assert set(res.keys()) == {"a"}
-    #     assert len(res["a"]) == 0
+            # < vector_size, == vector_size, > vector_size
+            for size in [1000, 1024, 1100]:
+                res = await (await (await rel.project("a")).limit(size)).fetchnumpy()
+                assert set(res.keys()) == {"a"}
+                # For some reason, this return a masked array. Shouldn't it be
+                # known that there can't be NULLs?
+                if isinstance(res, np.ma.MaskedArray):
+                    assert res.count() == size
+                    res = res.compressed()
+                else:
+                    assert len(res["a"]) == size
+                assert np.all(res["a"] == np.arange(start, start + size))
 
-    #     # < vector_size, == vector_size, > vector_size
-    #     for size in [1000, 1024, 1100]:
-    #         res = rel.project("a").limit(size).fetchnumpy()
-    #         assert set(res.keys()) == {"a"}
-    #         # For some reason, this return a masked array. Shouldn't it be
-    #         # known that there can't be NULLs?
-    #         if isinstance(res, np.ma.MaskedArray):
-    #             assert res.count() == size
-    #             res = res.compressed()
-    #         else:
-    #             assert len(res["a"]) == size
-    #         assert np.all(res["a"] == np.arange(start, start + size))
-
-    #     with pytest.raises(duckdb.ConversionException, match="Conversion Error.*out of range.*"):
-    #         # invalid conversion of negative integer to UINTEGER
-    #         rel.project("CAST(a as UINTEGER)").fetchnumpy()
+            with self.assertRaisesRegex(aioduckdb.ConversionException, "Conversion Error.*out of range.*"):
+                # invalid conversion of negative integer to UINTEGER
+                await (await rel.project("CAST(a as UINTEGER)")).fetchnumpy()
 

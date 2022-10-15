@@ -1,5 +1,6 @@
 import duckdb
 from typing import Any, AsyncIterator, Iterable, Optional, Tuple, TYPE_CHECKING, Union
+from .result import Result
 
 if TYPE_CHECKING:
     from .core import Connection
@@ -23,6 +24,10 @@ class Relation:
     async def aggregate(self, aggr_expr: str, group_expr: str = '') -> "Relation":
         rel = await self._execute(self.relation.aggregate, aggr_expr, group_expr=group_expr)
         return Relation(self._conn, rel)
+
+    @property
+    def alias(self):
+        return self.relation.alias
 
     async def apply(self, function_name: str, function_aggr: str,
                     group_expr: str = '', function_parameter: str = '', projected_columns: str = '') -> "Relation":
@@ -83,6 +88,12 @@ class Relation:
     async def except_(self, other_rel: "Relation") -> "Relation":
         rel = await self._execute(self.relation.except_, other_rel.relation)
         return Relation(self._conn, rel)
+
+    # relation execute does not have any arguments and none are even used in the c++ source code
+    # but the original tests pass it a query. not sure what this is about but just in case any positional
+    # arguments are passed through.
+    async def execute(self, *args) -> Result:
+        return Result(self._conn, await self._execute(self.relation.execute, *args))
 
     async def explain(self) -> str:
         return await self._execute(self.relation.explain)
@@ -171,6 +182,10 @@ class Relation:
         rel = await self._execute(self.relation.quantile, q, quantile_aggr, group_expr=group_expr)
         return Relation(self._conn, rel)
 
+    async def query(self, query: str, alias: str = 'query_relation') -> "Relation":
+        rel = await self._execute(self.relation.query, query, alias=alias)
+        return Relation(self._conn, rel)
+
     async def sem(self, aggregation_columns: str, group_columns: str = '') -> "Relation":
         rel = await self._execute(self.relation.sem, aggregation_columns, group_columns=group_columns)
         return Relation(self._conn, rel)
@@ -211,3 +226,6 @@ class Relation:
     async def var(self, var_aggr: str, group_expr: str = '') -> "Relation":
         rel = await self._execute(self.relation.var, var_aggr, group_expr=group_expr)
         return Relation(self._conn, rel)
+
+    async def write_csv(self, file_name: str) -> None:
+        await self._execute(self.relation.write_csv, file_name)

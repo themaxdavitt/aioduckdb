@@ -3,3 +3,4 @@
 
 from .smoke import SmokeTest
 from .relations import RelationTest
+from .arrow import TestArrowDataset
