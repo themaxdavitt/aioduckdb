@@ -4,7 +4,7 @@ from typing import Any, AsyncIterator, Iterable, Optional, Tuple, TYPE_CHECKING,
 # in DuckDB <0.7.0 there was a separate type, DuckDBPyResult, for a result.
 # In >=0.7.0, that was removed, there is only DuckDBPyConnection
 try:
-    from duckdb import DuckDBPyResult as DuckDBResult
+    from duckdb import DuckDBPyResult as DuckDBResult # type: ignore
 except ImportError:
     from duckdb import DuckDBPyConnection as DuckDBResult
 
